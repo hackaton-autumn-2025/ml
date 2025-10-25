@@ -1,4 +1,8 @@
 from app.schemas.models import RoutePoint, RouteRequest, RouteResponse
+import pandas as pd
+import numpy as np
+from typing import List, Tuple
+
 
 class DataProcessor:
     """Класс для обработки и подготовки данных"""
@@ -95,7 +99,7 @@ class DataProcessor:
 if __name__ == "__main__":
     # Тестирование модуля
     processor = DataProcessor()
-    df = processor.load_dataset("dataset.csv")
+    df = processor.load_dataset("data/dataset.csv")
     points = processor.prepare_route_points(df)
     
     print(f"Загружено {len(points)} точек маршрута")
