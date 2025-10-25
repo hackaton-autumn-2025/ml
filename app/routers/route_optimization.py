@@ -5,14 +5,15 @@ import json
 
 from app.schemas.models import RoutePoint, RouteRequest, RouteResponse, DatasetInfo, RouteStatistics, ClientLevel, TransportMode, OptimizationMethod
 from app.models.data_processor import DataProcessor
-from app.models.gnn_optimizer import RouteOptimizer
+from app.models.improved_gnn_optimizer import ImprovedRouteOptimizer
 
 # Создаем роутер для основных операций
 router = APIRouter(prefix="/api/v1", tags=["route-optimization"])
 
 # Инициализация компонентов
 data_processor = DataProcessor()
-route_optimizer = RouteOptimizer()
+# Загружаем обученную улучшенную модель
+route_optimizer = ImprovedRouteOptimizer(model_path="models/improved_route_optimization_gnn.pth")
 
 @router.get("/")
 async def root():

@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field, validator, root_validator
+from pydantic import BaseModel, Field, validator, model_validator
 from typing import List, Dict, Tuple, Optional, Union
 from datetime import datetime, time
 from enum import Enum
@@ -43,13 +43,13 @@ class RoutePoint(BaseModel):
         except ValueError:
             raise ValueError('Время должно быть в формате HH:MM (например, 09:00)')
     
-    @root_validator
-    def validate_time_logic(cls, values):
+    @model_validator(mode='after')
+    def validate_time_logic(self):
         """Валидация логики времени"""
-        work_start = datetime.strptime(values.get('work_start', '00:00'), '%H:%M').time()
-        work_end = datetime.strptime(values.get('work_end', '23:59'), '%H:%M').time()
-        lunch_start = datetime.strptime(values.get('lunch_start', '00:00'), '%H:%M').time()
-        lunch_end = datetime.strptime(values.get('lunch_end', '23:59'), '%H:%M').time()
+        work_start = datetime.strptime(self.work_start, '%H:%M').time()
+        work_end = datetime.strptime(self.work_end, '%H:%M').time()
+        lunch_start = datetime.strptime(self.lunch_start, '%H:%M').time()
+        lunch_end = datetime.strptime(self.lunch_end, '%H:%M').time()
         
         if work_start >= work_end:
             raise ValueError('Время начала работы должно быть раньше времени окончания')
@@ -60,7 +60,7 @@ class RoutePoint(BaseModel):
         if not (work_start <= lunch_start <= lunch_end <= work_end):
             raise ValueError('Обеденное время должно быть в пределах рабочего времени')
         
-        return values
+        return self
     
     def get_work_start_time(self) -> time:
         """Получить время начала работы как объект time"""
