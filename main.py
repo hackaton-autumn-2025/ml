@@ -4,7 +4,6 @@ import uvicorn
 
 from app.routers.route_optimization import router as route_router
 
-# Создаем приложение FastAPI
 app = FastAPI(
     title="Route Optimization API",
     description="API для оптимизации маршрутов с использованием Graph Neural Networks",
@@ -13,7 +12,6 @@ app = FastAPI(
     redoc_url="/redoc"
 )
 
-# Настройка CORS
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -22,7 +20,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Подключаем роутеры
 app.include_router(route_router)
 
 @app.get("/")

@@ -5,59 +5,49 @@
 import os
 from pathlib import Path
 
-# Базовые пути
 BASE_DIR = Path(__file__).parent
 DATA_DIR = BASE_DIR / "data"
 MODELS_DIR = BASE_DIR / "models"
 LOGS_DIR = BASE_DIR / "logs"
 
-# Создаем директории если их нет
 DATA_DIR.mkdir(exist_ok=True)
 MODELS_DIR.mkdir(exist_ok=True)
 LOGS_DIR.mkdir(exist_ok=True)
 
-# Настройки API
 API_TITLE = "Route Optimization API"
 API_VERSION = "1.0.0"
 API_DESCRIPTION = "API для оптимизации маршрутов с использованием Graph Neural Networks"
 
-# Настройки сервера
 HOST = "0.0.0.0"
 PORT = 8000
 DEBUG = os.getenv("DEBUG", "False").lower() == "true"
 
-# Настройки данных
 DATASET_PATH = DATA_DIR / "dataset.csv"
 DEFAULT_MAX_POINTS = 10
 DEFAULT_TRAFFIC_LEVEL = 3
 DEFAULT_TRANSPORT_MODE = "car"
 DEFAULT_OPTIMIZATION_METHOD = "genetic"
 
-# Настройки модели
 GNN_HIDDEN_DIM = 64
 GNN_NUM_LAYERS = 3
 GNN_DROPOUT = 0.1
 GNN_NODE_FEATURES = 8
 
-# Настройки оптимизации
 GENETIC_POPULATION_SIZE = 50
 GENETIC_GENERATIONS = 100
 GENETIC_CROSSOVER_RATE = 0.7
 GENETIC_MUTATION_RATE = 0.1
 
-# Настройки транспорта
 CAR_SPEED_KMH = 50
 WALK_SPEED_KMH = 5
-TRAFFIC_FACTOR = 0.1  # снижение скорости на 10% за каждый уровень пробок
+TRAFFIC_FACTOR = 0.1  
 
-# Настройки времени
-DEFAULT_STOP_DURATION = 30  # минуты
+DEFAULT_STOP_DURATION = 30 
 WORK_START_DEFAULT = "09:00"
 WORK_END_DEFAULT = "18:00"
 LUNCH_START_DEFAULT = "13:00"
 LUNCH_END_DEFAULT = "14:00"
 
-# Настройки валидации
 MIN_POINTS = 2
 MAX_POINTS = 100
 MIN_STOP_DURATION = 1
@@ -65,11 +55,9 @@ MAX_STOP_DURATION = 300
 MIN_TRAFFIC_LEVEL = 0
 MAX_TRAFFIC_LEVEL = 10
 
-# Настройки логирования
 LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
 LOG_FORMAT = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 
-# CORS настройки
 CORS_ORIGINS = ["*"]
 CORS_METHODS = ["*"]
 CORS_HEADERS = ["*"]

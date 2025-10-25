@@ -49,12 +49,10 @@ class ImprovedModelTrainer:
         self.model_path = model_path
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         
-        # Создаем директорию для моделей
         os.makedirs(model_path, exist_ok=True)
         
-        # Инициализируем улучшенную модель
         self.model = ImprovedRouteOptimizationGNN(
-            node_features=14,  # Увеличили количество признаков
+            node_features=14,  
             hidden_dim=128,
             num_layers=4,
             num_heads=8,
@@ -64,14 +62,12 @@ class ImprovedModelTrainer:
         )
         self.model.to(self.device)
         
-        # Улучшенный оптимизатор с weight decay
         self.optimizer = optim.AdamW(
             self.model.parameters(), 
             lr=0.001, 
             weight_decay=1e-4
         )
         
-        # Learning rate scheduler
         self.scheduler = ReduceLROnPlateau(
             self.optimizer, 
             mode='min', 
@@ -79,11 +75,9 @@ class ImprovedModelTrainer:
             patience=5
         )
         
-        # Функция потерь с дополнительными компонентами
         self.criterion = nn.MSELoss()
         self.priority_criterion = nn.BCELoss()
         
-        # Метрики для отслеживания
         self.train_losses = []
         self.val_losses = []
         self.learning_rates = []
@@ -95,10 +89,8 @@ class ImprovedModelTrainer:
         """Создание улучшенного графа для обучения"""
         n = len(features)
         
-        # Создаем тензор признаков узлов (14 признаков)
         x = torch.tensor(features, dtype=torch.float)
         
-        # Создаем ребра с дополнительными атрибутами
         edge_list = []
         edge_weights = []
         edge_attrs = []
@@ -108,16 +100,14 @@ class ImprovedModelTrainer:
                 if i != j:
                     edge_list.append([i, j])
                     
-                    # Базовый вес
                     base_weight = time_matrix[i][j]
                     edge_weights.append(1.0 / (base_weight + 1e-6))
                     
-                    # Дополнительные атрибуты ребра
                     edge_attr = [
-                        base_weight / 60.0,  # время в часах
-                        1.0,  # приоритет
-                        1.0,  # трафик
-                        1.0   # расстояние
+                        base_weight / 60.0,  
+                        1.0,  
+                        1.0, 
+                        1.0  
                     ]
                     edge_attrs.append(edge_attr)
         
@@ -145,46 +135,37 @@ class ImprovedModelTrainer:
                 optimal_route = item['optimal_route']
                 features = item['features']
                 
-                # Создаем улучшенный граф
                 graph_data = self.create_enhanced_graph_data(features, time_matrix)
                 
-                # Перемещаем данные на устройство
                 x = graph_data['x'].to(self.device)
                 edge_index = graph_data['edge_index'].to(self.device)
                 edge_attr = graph_data['edge_attr'].to(self.device)
                 
-                # Прямой проход
                 order_scores, time_scores, priority_scores = self.model(x, edge_index, edge_attr)
                 
-                # Создаем целевые значения
                 target_order = torch.zeros_like(order_scores)
                 target_time = torch.zeros_like(time_scores)
                 target_priority = torch.zeros_like(priority_scores)
                 
-                # Заполняем целевые значения на основе оптимального маршрута
                 for j, point_idx in enumerate(optimal_route):
                     target_order[point_idx] = j / len(optimal_route)
                     target_time[point_idx] = j / len(optimal_route)
                     
-                    # Приоритет на основе уровня клиента
                     if points[point_idx].client_level == 'VIP':
                         target_priority[point_idx] = 1.0
                     else:
                         target_priority[point_idx] = 0.0
                 
-                # Вычисляем потери с дополнительными компонентами
                 order_loss = self.criterion(order_scores, target_order)
                 time_loss = self.criterion(time_scores, target_time)
                 priority_loss = self.priority_criterion(priority_scores, target_priority)
                 
-                # Комбинированная потеря
                 loss = order_loss + time_loss + 0.5 * priority_loss
                 batch_loss += loss
             
             batch_loss /= len(batch)
             batch_loss.backward()
             
-            # Gradient clipping для стабильности
             torch.nn.utils.clip_grad_norm_(self.model.parameters(), max_norm=1.0)
             
             self.optimizer.step()
@@ -248,7 +229,6 @@ class ImprovedModelTrainer:
         data_processor = DataProcessor()
         route_optimizer = RouteOptimizer()
         
-        # Загружаем базовый датасет
         df = data_processor.load_dataset("data/dataset.csv")
         base_points = data_processor.prepare_route_points(df)
         
@@ -263,29 +243,23 @@ class ImprovedModelTrainer:
             if i % 100 == 0:
                 print(f"Обработано {i}/{num_samples} примеров")
             
-            # Случайно выбираем подмножество точек (5-15 точек)
             num_points = np.random.randint(5, min(16, len(base_points)))
             selected_indices = np.random.choice(len(base_points), num_points, replace=False)
             selected_points = [base_points[idx] for idx in selected_indices]
             
-            # Случайные параметры
             transport_mode = np.random.choice(['car', 'walk'])
             traffic_level = np.random.randint(0, 11)
             
-            # Создаем матрицу времени
             time_matrix = data_processor.create_time_matrix(
                 selected_points, transport_mode, traffic_level
             )
             
-            # Находим оптимальный маршрут
             optimal_route = route_optimizer.optimize_route(
                 selected_points, time_matrix, method='genetic'
             )
             
-            # Создаем признаки для GNN
             features = self._create_features(selected_points, traffic_level, transport_mode)
             
-            # Проверяем размерность признаков
             if len(features) > 0 and len(features[0]) != 14:
                 print(f"Ошибка: ожидается 14 признаков, получено {len(features[0])}")
                 print(f"Признаки: {features[0]}")
@@ -302,31 +276,25 @@ class ImprovedModelTrainer:
         """Создание признаков для GNN"""
         features = []
         for point in points:
-            # Нормализуем координаты
+            
             lat_norm = (point.latitude - 47.0) / 0.5
             lon_norm = (point.longitude - 39.0) / 0.5
             
-            # Время работы (нормализованное)
             work_start_norm = point.get_work_start_time().hour / 24.0
             work_end_norm = point.get_work_end_time().hour / 24.0
             
-            # Уровень клиента (VIP = 1, Standart = 0)
             client_level_norm = 1.0 if point.client_level == 'VIP' else 0.0
             
-            # Время остановки
             stop_duration_norm = point.stop_duration / 60.0
             
-            # Трафик и режим транспорта
             traffic_norm = traffic_level / 10.0
             transport_norm = 1.0 if transport_mode == 'car' else 0.0
             
-            # Дополнительные признаки для улучшенной модели
             work_duration_norm = (work_end_norm - work_start_norm) % 1.0
             lunch_start_norm = point.get_lunch_start_time().hour / 24.0
             lunch_end_norm = point.get_lunch_end_time().hour / 24.0
             lunch_duration_norm = (lunch_end_norm - lunch_start_norm) % 1.0
             
-            # Срочность и доступность
             urgency_score = self._calculate_urgency_score(point, traffic_level)
             accessibility_score = self._calculate_accessibility_score(point, points)
             
@@ -351,25 +319,22 @@ class ImprovedModelTrainer:
     
     def _calculate_accessibility_score(self, point, all_points):
         """Расчет доступности точки"""
-        # Упрощенный расчет - можно улучшить
+        
         return 1.0 if point.client_level == 'VIP' else 0.5
     
     def train(self, epochs: int = 50, batch_size: int = 32):
         """Улучшенный цикл обучения с early stopping"""
         print("Генерация обучающих данных...")
         
-        # Генерируем больше данных для лучшего обучения
         points_list, time_matrices, optimal_routes, features_list = self.generate_training_data(
             num_samples=2000  # Увеличили количество образцов
         )
         
-        # Разделение на train/validation
         train_points, val_points, train_matrices, val_matrices, train_routes, val_routes, train_features, val_features = train_test_split(
             points_list, time_matrices, optimal_routes, features_list,
             test_size=0.2, random_state=42
         )
         
-        # Создаем датасеты
         train_dataset = RouteDataset(train_points, train_matrices, train_routes, train_features)
         val_dataset = RouteDataset(val_points, val_matrices, val_routes, val_features)
         
@@ -384,7 +349,6 @@ class ImprovedModelTrainer:
             train_loss = self.train_epoch(train_loader)
             val_loss = self.validate(val_loader)
             
-            # Обновляем learning rate
             self.scheduler.step(val_loss)
             current_lr = self.optimizer.param_groups[0]['lr']
             
@@ -392,11 +356,9 @@ class ImprovedModelTrainer:
             self.val_losses.append(val_loss)
             self.learning_rates.append(current_lr)
             
-            # Early stopping
             if val_loss < self.best_val_loss:
                 self.best_val_loss = val_loss
                 self.patience_counter = 0
-                # Сохраняем лучшую модель
                 torch.save(self.model.state_dict(), os.path.join(self.model_path, "best_model.pth"))
             else:
                 self.patience_counter += 1
@@ -404,18 +366,14 @@ class ImprovedModelTrainer:
             if epoch % 5 == 0:
                 print(f"Эпоха {epoch+1}/{epochs}: Train Loss = {train_loss:.4f}, Val Loss = {val_loss:.4f}, LR = {current_lr:.6f}")
             
-            # Early stopping
             if self.patience_counter >= self.early_stopping_patience:
                 print(f"Early stopping на эпохе {epoch+1}")
                 break
         
-        # Загружаем лучшую модель
         self.model.load_state_dict(torch.load(os.path.join(self.model_path, "best_model.pth")))
         
-        # Сохраняем финальную модель
         torch.save(self.model.state_dict(), os.path.join(self.model_path, "improved_route_optimization_gnn.pth"))
         
-        # Сохраняем метаданные
         metadata = {
             "model_type": "ImprovedRouteOptimizationGNN",
             "node_features": 14,
@@ -435,7 +393,6 @@ class ImprovedModelTrainer:
         with open(os.path.join(self.model_path, "improved_model_metadata.json"), 'w') as f:
             json.dump(metadata, f, indent=2)
         
-        # Создаем улучшенные графики
         self.plot_improved_training_history()
         
         print(f"Улучшенная модель сохранена в {self.model_path}")
@@ -445,7 +402,6 @@ class ImprovedModelTrainer:
         """Создание улучшенных графиков обучения"""
         fig, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2, figsize=(15, 10))
         
-        # График потерь
         ax1.plot(self.train_losses, label='Train Loss', color='blue')
         ax1.plot(self.val_losses, label='Validation Loss', color='red')
         ax1.set_title('Training and Validation Loss')
@@ -454,7 +410,6 @@ class ImprovedModelTrainer:
         ax1.legend()
         ax1.grid(True)
         
-        # График learning rate
         ax2.plot(self.learning_rates, label='Learning Rate', color='green')
         ax2.set_title('Learning Rate Schedule')
         ax2.set_xlabel('Epoch')
@@ -463,7 +418,6 @@ class ImprovedModelTrainer:
         ax2.grid(True)
         ax2.set_yscale('log')
         
-        # График разности потерь
         loss_diff = [abs(train - val) for train, val in zip(self.train_losses, self.val_losses)]
         ax3.plot(loss_diff, label='|Train - Val| Loss', color='purple')
         ax3.set_title('Overfitting Indicator')
@@ -472,7 +426,6 @@ class ImprovedModelTrainer:
         ax3.legend()
         ax3.grid(True)
         
-        # График скользящего среднего
         window = min(10, len(self.train_losses) // 4)
         if window > 1:
             train_smooth = np.convolve(self.train_losses, np.ones(window)/window, mode='valid')

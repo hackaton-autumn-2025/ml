@@ -11,7 +11,7 @@ class RouteOptimizationGNN(nn.Module):
     """GNN модель для оптимизации маршрутов"""
     
     def __init__(self, 
-                 node_features: int = 8,  # координаты, время работы, уровень клиента, etc.
+                 node_features: int = 8,  
                  hidden_dim: int = 64,
                  num_layers: int = 3,
                  dropout: float = 0.1):
@@ -21,14 +21,12 @@ class RouteOptimizationGNN(nn.Module):
         self.hidden_dim = hidden_dim
         self.num_layers = num_layers
         
-        # GNN слои
         self.convs = nn.ModuleList()
         self.convs.append(GATConv(node_features, hidden_dim, heads=4, dropout=dropout))
         
         for _ in range(num_layers - 1):
             self.convs.append(GATConv(hidden_dim * 4, hidden_dim, heads=4, dropout=dropout))
         
-        # Слои для предсказания порядка посещения
         self.order_predictor = nn.Sequential(
             nn.Linear(hidden_dim * 4, hidden_dim),
             nn.ReLU(),
@@ -36,7 +34,6 @@ class RouteOptimizationGNN(nn.Module):
             nn.Linear(hidden_dim, 1)
         )
         
-        # Слои для предсказания времени прибытия
         self.time_predictor = nn.Sequential(
             nn.Linear(hidden_dim * 4, hidden_dim),
             nn.ReLU(),
@@ -48,14 +45,13 @@ class RouteOptimizationGNN(nn.Module):
         
     def forward(self, x, edge_index, batch=None):
         """Прямой проход через GNN"""
-        # Применяем GNN слои
+        
         for i, conv in enumerate(self.convs):
             x = conv(x, edge_index)
             if i < len(self.convs) - 1:
                 x = F.relu(x)
                 x = self.dropout(x)
         
-        # Предсказываем порядок посещения и время
         order_scores = self.order_predictor(x)
         time_scores = self.time_predictor(x)
         
@@ -76,18 +72,14 @@ class RouteOptimizer:
         """Создание графа для GNN из точек маршрута"""
         n = len(points)
         
-        # Создаем узлы (точки маршрута)
         node_features = []
         for point in points:
-            # Нормализуем координаты
-            lat_norm = (point.latitude - 47.0) / 0.5  # нормализация для Ростова-на-Дону
+            lat_norm = (point.latitude - 47.0) / 0.5  
             lon_norm = (point.longitude - 39.0) / 0.5
             
-            # Время работы (нормализованное)
             work_start_norm = point.get_work_start_time().hour / 24.0
             work_end_norm = point.get_work_end_time().hour / 24.0
             
-            # Уровень клиента (VIP = 1, Standart = 0)
             client_level_norm = 1.0 if point.client_level == 'VIP' else 0.0
             
             # Время остановки

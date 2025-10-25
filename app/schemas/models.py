@@ -35,7 +35,7 @@ class RoutePoint(BaseModel):
     def validate_time_format(cls, v):
         """Валидация формата времени"""
         try:
-            # Проверяем строгий формат HH:MM
+            
             if len(v) != 5 or v[2] != ':':
                 raise ValueError('Время должно быть в формате HH:MM')
             datetime.strptime(v, '%H:%M')

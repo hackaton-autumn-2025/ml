@@ -7,12 +7,9 @@ from app.schemas.models import RoutePoint, RouteRequest, RouteResponse, DatasetI
 from app.models.data_processor import DataProcessor
 from app.models.improved_gnn_optimizer import ImprovedRouteOptimizer
 
-# Создаем роутер для основных операций
 router = APIRouter(prefix="/api/v1", tags=["route-optimization"])
 
-# Инициализация компонентов
 data_processor = DataProcessor()
-# Загружаем обученную улучшенную модель
 route_optimizer = ImprovedRouteOptimizer(model_path="models/improved_route_optimization_gnn.pth")
 
 @router.get("/")
@@ -59,7 +56,7 @@ async def get_dataset_info():
                     "client_level": p.client_level,
                     "coordinates": (p.latitude, p.longitude)
                 }
-                for p in points[:5]  # первые 5 точек как пример
+                for p in points[:5] 
             ]
         )
         
@@ -103,20 +100,16 @@ async def optimize_route(request: RouteRequest):
     - Координаты маршрута
     """
     try:
-        # Конвертируем точки
         points = [convert_point_request_to_route_point(point) for point in request.points]
         
-        # Парсим время начала
         start_time = request.get_start_time()
         
-        # Создаем матрицу времени
         time_matrix = data_processor.create_time_matrix(
             points, 
             request.transport_mode, 
             request.traffic_level
         )
         
-        # Находим ближайшую к стартовой точке
         start_point_idx = 0
         min_distance = float('inf')
         
@@ -129,7 +122,6 @@ async def optimize_route(request: RouteRequest):
                 min_distance = distance
                 start_point_idx = i
         
-        # Оптимизируем маршрут
         optimized_order = route_optimizer.optimize_route(
             points, 
             time_matrix, 

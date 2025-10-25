@@ -84,7 +84,7 @@ class RouteOptimizationTester:
     def test_custom_route_optimization(self):
         """Тест оптимизации пользовательского маршрута"""
         try:
-            # Создаем тестовые точки
+
             test_points = [
                 {
                     "id": 1,
@@ -244,13 +244,11 @@ class RouteOptimizationTester:
         coordinates = route_data['route_coordinates']
         arrival_times = route_data.get('arrival_times', [])
         
-        # Создаем карту
         m = folium.Map(
             location=[coordinates[0][0], coordinates[0][1]],
             zoom_start=12
         )
         
-        # Добавляем точки маршрута
         for i, (lat, lon) in enumerate(coordinates):
             color = 'red' if i == 0 else 'blue'
             arrival_time = arrival_times[i] if i < len(arrival_times) else ""
@@ -261,7 +259,6 @@ class RouteOptimizationTester:
                 icon=folium.Icon(color=color, icon='info-sign')
             ).add_to(m)
         
-        # Добавляем линии маршрута
         folium.PolyLine(
             coordinates,
             color="green",
@@ -269,7 +266,6 @@ class RouteOptimizationTester:
             opacity=0.8
         ).add_to(m)
         
-        # Сохраняем карту
         m.save(filename)
         print(f"✅ Карта маршрута сохранена в {filename}")
     
@@ -278,38 +274,30 @@ class RouteOptimizationTester:
         print("🚀 Начинаем тестирование системы оптимизации маршрутов")
         print("=" * 60)
         
-        # Тест 1: Проверка состояния сервиса
         print("\n1. Проверка состояния сервиса")
         if not self.test_health():
             print("❌ Сервис недоступен. Запустите FastAPI сервер.")
             return
         
-        # Тест 2: Информация о датасете
         print("\n2. Информация о датасете")
         dataset_info = self.test_dataset_info()
         
-        # Тест 3: Оптимизация из датасета
         print("\n3. Оптимизация маршрута из датасета")
         route_data = self.test_route_optimization_from_dataset()
         
-        # Тест 4: Пользовательский маршрут
         print("\n4. Оптимизация пользовательского маршрута")
         custom_route = self.test_custom_route_optimization()
         
-        # Тест 5: Сравнение методов
         print("\n5. Сравнение методов оптимизации")
         method_comparison = self.compare_optimization_methods()
         
-        # Тест 6: Разные уровни трафика
         print("\n6. Тестирование при разных уровнях загруженности")
         traffic_results = self.test_different_traffic_levels()
         
-        # Создание карты
         if route_data:
             print("\n7. Создание карты маршрута")
             self.create_route_map(route_data)
         
-        # Итоговый отчет
         print("\n" + "=" * 60)
         print("📊 ИТОГОВЫЙ ОТЧЕТ")
         print("=" * 60)

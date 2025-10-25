@@ -5,7 +5,6 @@
 import requests
 import json
 
-# Базовый URL API
 BASE_URL = "http://localhost:8000"
 
 def test_health():
@@ -31,7 +30,6 @@ def test_route_optimization():
     """Тест оптимизации маршрута"""
     print("🚀 Тестируем оптимизацию маршрута...")
     
-    # Создаем тестовый запрос
     test_request = {
         "points": [
             {
@@ -105,7 +103,7 @@ def test_route_from_dataset():
         "start_time": "09:00",
         "traffic_level": 3,
         "transport_mode": "car",
-        "optimization_method": "hybrid",  # Используем улучшенный гибридный метод
+        "optimization_method": "hybrid", 
         "max_points": 5
     }
     

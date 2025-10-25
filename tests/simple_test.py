@@ -33,14 +33,12 @@ def test_data_loading():
         
         print("✅ Все необходимые колонки присутствуют")
         
-        # Проверяем данные
         vip_count = len(df[df['Уровень клиента'] == 'VIP'])
         standard_count = len(df[df['Уровень клиента'] == 'Standart'])
         
         print(f"✅ VIP клиентов: {vip_count}")
         print(f"✅ Стандартных клиентов: {standard_count}")
         
-        # Проверяем координаты
         lat_range = (df['Географическая широта'].min(), df['Географическая широта'].max())
         lon_range = (df['Географическая долгота'].min(), df['Географическая долгота'].max())
         
@@ -58,10 +56,9 @@ def test_coordinate_calculation():
     print("\n🔄 Тестирование расчета расстояний...")
     
     try:
-        # Загружаем данные
+        
         df = pd.read_csv("data/dataset.csv")
         
-        # Берем первые 5 точек для теста
         test_points = df.head(5)
         
         def calculate_distance(point1, point2):
@@ -69,8 +66,7 @@ def test_coordinate_calculation():
             lat1, lon1 = point1
             lat2, lon2 = point2
             
-            # Формула гаверсинуса (упрощенная)
-            R = 6371  # Радиус Земли в км
+            R = 6371  
             dlat = np.radians(lat2 - lat1)
             dlon = np.radians(lon2 - lon1)
             a = np.sin(dlat/2)**2 + np.cos(np.radians(lat1)) * np.cos(np.radians(lat2)) * np.sin(dlon/2)**2
@@ -79,7 +75,6 @@ def test_coordinate_calculation():
             
             return distance
         
-        # Тестируем расчет расстояний
         distances = []
         for i in range(len(test_points)):
             for j in range(i+1, len(test_points)):
@@ -109,7 +104,6 @@ def test_time_validation():
     try:
         from datetime import datetime
         
-        # Тестовые времена
         valid_times = ["09:00", "18:00", "13:00", "14:00"]
         invalid_times = ["25:00", "12:60", "abc", "9:00", "09:0", "9:00"]
         
@@ -148,17 +142,16 @@ def test_simple_optimization():
     print("\n🔄 Тестирование простого алгоритма оптимизации...")
     
     try:
-        # Загружаем данные
+        
         df = pd.read_csv("data/dataset.csv")
         
-        # Берем первые 5 точек
         test_points = df.head(5)
         
         def simple_greedy_optimization(points):
             """Простой жадный алгоритм"""
             n = len(points)
             visited = [False] * n
-            route = [0]  # Начинаем с первой точки
+            route = [0]  
             visited[0] = True
             
             current = 0
@@ -169,16 +162,14 @@ def test_simple_optimization():
                 
                 for next_point in range(n):
                     if not visited[next_point]:
-                        # Простой расчет расстояния
+                        
                         lat1 = points.iloc[current]['Географическая широта']
                         lon1 = points.iloc[current]['Географическая долгота']
                         lat2 = points.iloc[next_point]['Географическая широта']
                         lon2 = points.iloc[next_point]['Географическая долгота']
                         
-                        # Упрощенное расстояние
                         distance = ((lat2 - lat1)**2 + (lon2 - lon1)**2)**0.5
                         
-                        # Приоритет VIP клиентам
                         if points.iloc[next_point]['Уровень клиента'] == 'VIP':
                             distance *= 0.8
                         
@@ -193,19 +184,16 @@ def test_simple_optimization():
             
             return route
         
-        # Тестируем оптимизацию
         optimized_route = simple_greedy_optimization(test_points)
         
         print(f"✅ Оптимизированный маршрут: {optimized_route}")
         
-        # Проверяем, что все точки включены
         if len(set(optimized_route)) == len(test_points):
             print("✅ Все точки включены в маршрут")
         else:
             print("❌ Не все точки включены в маршрут")
             return False
         
-        # Проверяем приоритет VIP клиентов
         vip_positions = []
         for i, point_idx in enumerate(optimized_route):
             if test_points.iloc[point_idx]['Уровень клиента'] == 'VIP':
@@ -224,7 +212,7 @@ def test_api_structure():
     print("\n🔄 Тестирование структуры API...")
     
     try:
-        # Проверяем наличие файлов
+        
         required_files = [
             "main.py",
             "app/schemas/models.py", 
@@ -254,7 +242,6 @@ def test_api_structure():
             print(f"❌ Отсутствуют файлы: {missing_files}")
             return False
         
-        # Проверяем структуру main.py
         with open("main.py", 'r') as f:
             main_content = f.read()
             
@@ -275,7 +262,6 @@ def test_api_structure():
         
         print("✅ Все необходимые импорты присутствуют")
         
-        # Проверяем эндпоинты в роутере
         try:
             with open("app/routers/route_optimization.py", 'r') as f:
                 router_content = f.read()

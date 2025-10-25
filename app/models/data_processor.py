@@ -8,13 +8,12 @@ class DataProcessor:
     """Класс для обработки и подготовки данных"""
     
     def __init__(self):
-        self.speed_car = 50  # км/ч средняя скорость на машине
-        self.speed_walk = 5   # км/ч средняя скорость пешком
+        self.speed_car = 50  
+        self.speed_walk = 5   
         
     def load_dataset(self, file_path: str = "data/dataset.csv") -> pd.DataFrame:
         """Загрузка датасета из CSV файла"""
         df = pd.read_csv(file_path)
-        # Удаляем столбец "Динамический критерий" как указано в требованиях
         if 'Динамический критерий' in df.columns:
             df = df.drop('Динамический критерий', axis=1)
         return df
@@ -40,12 +39,11 @@ class DataProcessor:
         return points
     
     def calculate_distance(self, point1: Tuple[float, float], point2: Tuple[float, float]) -> float:
-        """Расчет расстояния между двумя точками (упрощенная формула)"""
+        """Расчет расстояния между двумя точками"""
         lat1, lon1 = point1
         lat2, lon2 = point2
         
-        # Упрощенная формула расстояния (для небольших расстояний)
-        R = 6371  # Радиус Земли в км
+        R = 6371  
         dlat = np.radians(lat2 - lat1)
         dlon = np.radians(lon2 - lon1)
         a = np.sin(dlat/2)**2 + np.cos(np.radians(lat1)) * np.cos(np.radians(lat2)) * np.sin(dlon/2)**2
@@ -58,12 +56,11 @@ class DataProcessor:
         """Расчет времени в пути с учетом транспорта и пробок"""
         base_speed = self.speed_car if transport_mode == "car" else self.speed_walk
         
-        # Учет пробок (снижение скорости на 10% за каждый уровень пробок)
         traffic_factor = 1 - (traffic_level * 0.1)
-        effective_speed = base_speed * max(0.1, traffic_factor)  # минимум 10% от базовой скорости
+        effective_speed = base_speed * max(0.1, traffic_factor)  
         
-        travel_time = distance / effective_speed  # время в часах
-        return travel_time * 60  # время в минутах
+        travel_time = distance / effective_speed  
+        return travel_time * 60  
     
     def create_distance_matrix(self, points: List[RoutePoint]) -> np.ndarray:
         """Создание матрицы расстояний между всеми точками"""
@@ -90,14 +87,14 @@ class DataProcessor:
                 if i != j:
                     distance = distance_matrix[i][j]
                     travel_time = self.calculate_travel_time(distance, transport_mode, traffic_level)
-                    # Добавляем время остановки
+                    
                     stop_time = points[j].stop_duration
                     time_matrix[i][j] = travel_time + stop_time
         
         return time_matrix
 
 if __name__ == "__main__":
-    # Тестирование модуля
+
     processor = DataProcessor()
     df = processor.load_dataset("data/dataset.csv")
     points = processor.prepare_route_points(df)

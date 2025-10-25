@@ -12,10 +12,10 @@ class ImprovedRouteOptimizationGNN(nn.Module):
     
     def __init__(self, 
                  node_features: int = 8,
-                 hidden_dim: int = 128,  # Увеличили размерность
-                 num_layers: int = 4,    # Больше слоев
-                 num_heads: int = 8,     # Больше attention heads
-                 dropout: float = 0.2,   # Больше dropout для регуляризации
+                 hidden_dim: int = 128,  
+                 num_layers: int = 4,    
+                 num_heads: int = 8,     
+                 dropout: float = 0.2,   
                  use_residual: bool = True,
                  use_batch_norm: bool = True):
         super(ImprovedRouteOptimizationGNN, self).__init__()
@@ -26,15 +26,12 @@ class ImprovedRouteOptimizationGNN(nn.Module):
         self.use_residual = use_residual
         self.use_batch_norm = use_batch_norm
         
-        # Входной слой с batch normalization
         self.input_norm = nn.BatchNorm1d(node_features) if use_batch_norm else nn.Identity()
         self.input_proj = nn.Linear(node_features, hidden_dim)
         
-        # GNN слои с residual connections
         self.convs = nn.ModuleList()
         self.batch_norms = nn.ModuleList()
         
-        # Первый слой
         self.convs.append(TransformerConv(
             hidden_dim, hidden_dim, 
             heads=num_heads, dropout=dropout, 
@@ -51,16 +48,14 @@ class ImprovedRouteOptimizationGNN(nn.Module):
             ))
             self.batch_norms.append(nn.BatchNorm1d(hidden_dim) if use_batch_norm else nn.Identity())
         
-        # Attention pooling для агрегации информации
         self.attention_pool = nn.Sequential(
             nn.Linear(hidden_dim, hidden_dim // 2),
             nn.Tanh(),
             nn.Linear(hidden_dim // 2, 1)
         )
         
-        # Улучшенные предсказатели с residual connections
         self.order_predictor = nn.Sequential(
-            nn.Linear(hidden_dim * 2, hidden_dim),  # Увеличили входную размерность
+            nn.Linear(hidden_dim * 2, hidden_dim),  
             nn.BatchNorm1d(hidden_dim) if use_batch_norm else nn.Identity(),
             nn.ReLU(),
             nn.Dropout(dropout),
@@ -72,7 +67,7 @@ class ImprovedRouteOptimizationGNN(nn.Module):
         )
         
         self.time_predictor = nn.Sequential(
-            nn.Linear(hidden_dim * 2, hidden_dim),  # Увеличили входную размерность
+            nn.Linear(hidden_dim * 2, hidden_dim),  
             nn.BatchNorm1d(hidden_dim) if use_batch_norm else nn.Identity(),
             nn.ReLU(),
             nn.Dropout(dropout),
@@ -82,34 +77,30 @@ class ImprovedRouteOptimizationGNN(nn.Module):
             nn.Dropout(dropout),
             nn.Linear(hidden_dim // 2, 1)
         )
-        
-        # Дополнительный предсказатель для приоритета клиентов
+    
         self.priority_predictor = nn.Sequential(
-            nn.Linear(hidden_dim * 2, hidden_dim // 2),  # Увеличили входную размерность
+            nn.Linear(hidden_dim * 2, hidden_dim // 2),  
             nn.ReLU(),
             nn.Dropout(dropout),
             nn.Linear(hidden_dim // 2, 1),
-            nn.Sigmoid()  # Вероятность высокого приоритета
+            nn.Sigmoid()  
         )
         
         self.dropout = nn.Dropout(dropout)
         
     def forward(self, x, edge_index, edge_attr=None, batch=None):
         """Улучшенный прямой проход через GNN"""
-        # Нормализация входных данных
+        
         x = self.input_norm(x)
         x = self.input_proj(x)
         
-        # Сохраняем исходные признаки для residual connections
+        
         residual = x
         
-        # Применяем GNN слои с residual connections
         for i, (conv, bn) in enumerate(zip(self.convs, self.batch_norms)):
-            # Residual connection
             if self.use_residual and i > 0 and x.size(-1) == residual.size(-1):
                 x = x + residual
             
-            # GNN слой
             x = conv(x, edge_index, edge_attr)
             x = bn(x)
             
@@ -117,19 +108,15 @@ class ImprovedRouteOptimizationGNN(nn.Module):
                 x = F.relu(x)
                 x = self.dropout(x)
             
-            # Обновляем residual для следующего слоя
             residual = x
         
-        # Attention pooling для глобальной информации
         attention_weights = self.attention_pool(x)
         attention_weights = F.softmax(attention_weights, dim=0)
         global_features = (x * attention_weights).sum(dim=0, keepdim=True)
         
-        # Расширяем глобальные признаки для всех узлов
         global_features = global_features.expand(x.size(0), -1)
         x_with_global = torch.cat([x, global_features], dim=-1)
         
-        # Предсказания
         order_scores = self.order_predictor(x_with_global)
         time_scores = self.time_predictor(x_with_global)
         priority_scores = self.priority_predictor(x_with_global)
@@ -141,7 +128,7 @@ class ImprovedRouteOptimizer:
     
     def __init__(self, model_path: str = None):
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-        # Используем параметры, соответствующие обученной модели
+    
         self.model = ImprovedRouteOptimizationGNN(
             node_features=14,
             hidden_dim=128,
@@ -160,14 +147,12 @@ class ImprovedRouteOptimizer:
         """Создание улучшенного графа с дополнительными признаками"""
         n = len(points)
         
-        # Расширенные признаки узлов
         node_features = []
         for i, point in enumerate(points):
-            # Базовые координаты (нормализованные)
+            
             lat_norm = (point.latitude - 47.0) / 0.5
             lon_norm = (point.longitude - 39.0) / 0.5
             
-            # Временные признаки (более детальные)
             work_start_norm = point.get_work_start_time().hour / 24.0
             work_end_norm = point.get_work_end_time().hour / 24.0
             work_duration_norm = (work_end_norm - work_start_norm) % 1.0
@@ -176,15 +161,12 @@ class ImprovedRouteOptimizer:
             lunch_end_norm = point.get_lunch_end_time().hour / 24.0
             lunch_duration_norm = (lunch_end_norm - lunch_start_norm) % 1.0
             
-            # Уровень клиента и приоритет
             client_level_norm = 1.0 if point.client_level == 'VIP' else 0.0
             stop_duration_norm = point.stop_duration / 60.0
             
-            # Контекстные признаки
             traffic_norm = traffic_level / 10.0
             transport_norm = 1.0 if transport_mode == 'car' else 0.0
             
-            # Дополнительные признаки
             urgency_score = self._calculate_urgency_score(point, traffic_level)
             accessibility_score = self._calculate_accessibility_score(point, time_matrix, i)
             
@@ -200,7 +182,6 @@ class ImprovedRouteOptimizer:
         
         x = torch.tensor(node_features, dtype=torch.float)
         
-        # Улучшенные ребра с дополнительными атрибутами
         edge_list = []
         edge_weights = []
         edge_attrs = []
@@ -210,24 +191,20 @@ class ImprovedRouteOptimizer:
                 if i != j:
                     edge_list.append([i, j])
                     
-                    # Базовый вес (время перемещения)
                     base_weight = time_matrix[i][j]
                     
-                    # Дополнительные факторы
                     priority_factor = 1.0
                     if points[j].client_level == 'VIP':
-                        priority_factor = 0.7  # Приоритет VIP клиентам
+                        priority_factor = 0.7
                     
                     traffic_factor = 1.0 + (traffic_level / 10.0) * 0.5
                     distance_factor = self._calculate_distance_factor(points[i], points[j])
                     
-                    # Итоговый вес
                     final_weight = base_weight * priority_factor * traffic_factor * distance_factor
                     edge_weights.append(1.0 / (final_weight + 1e-6))
                     
-                    # Дополнительные атрибуты ребра
                     edge_attr = [
-                        base_weight / 60.0,  # время в часах
+                        base_weight / 60.0, 
                         priority_factor,
                         traffic_factor,
                         distance_factor
@@ -241,14 +218,11 @@ class ImprovedRouteOptimizer:
     
     def _calculate_urgency_score(self, point, traffic_level):
         """Расчет срочности посещения точки"""
-        # VIP клиенты имеют более высокую срочность
         base_urgency = 1.0 if point.client_level == 'VIP' else 0.5
         
-        # Учитываем время работы (ближе к концу дня = выше срочность)
         work_end_hour = point.get_work_end_time().hour
         time_factor = 1.0 - (work_end_hour - 9) / 9.0  # от 0 до 1
         
-        # Учитываем трафик
         traffic_factor = 1.0 + (traffic_level / 10.0) * 0.3
         
         return base_urgency * time_factor * traffic_factor
@@ -257,11 +231,10 @@ class ImprovedRouteOptimizer:
         """Расчет доступности точки (среднее время до других точек)"""
         times_to_others = [time_matrix[point_idx][j] for j in range(len(time_matrix)) if j != point_idx]
         avg_time = np.mean(times_to_others) if times_to_others else 0
-        return 1.0 / (avg_time / 60.0 + 1e-6)  # обратно пропорционально среднему времени
+        return 1.0 / (avg_time / 60.0 + 1e-6) 
     
     def _calculate_distance_factor(self, point1, point2):
         """Расчет фактора расстояния между точками"""
-        # Простое евклидово расстояние (в реальности можно использовать Haversine)
         lat_diff = point1.latitude - point2.latitude
         lon_diff = point1.longitude - point2.longitude
         distance = np.sqrt(lat_diff**2 + lon_diff**2)
@@ -272,10 +245,8 @@ class ImprovedRouteOptimizer:
         """Гибридный метод оптимизации с использованием GNN и генетического алгоритма"""
         n = len(points)
         
-        # Получаем предсказания от GNN
         gnn_route = self._optimize_with_gnn(points, time_matrix, start_point_idx)
         
-        # Получаем результат генетического алгоритма
         genetic_route = self._optimize_with_genetic(points, time_matrix, start_point_idx)
         
         # Комбинируем результаты
@@ -286,24 +257,20 @@ class ImprovedRouteOptimizer:
     
     def _optimize_with_gnn(self, points, time_matrix, start_point_idx=0):
         """Оптимизация с использованием GNN"""
-        # Создаем граф
+        
         graph_data = self.create_enhanced_graph_data(points, time_matrix, 3, 'car')
         
-        # Получаем предсказания
         with torch.no_grad():
             order_scores, time_scores, priority_scores = self.model(
                 graph_data.x, graph_data.edge_index, graph_data.edge_attr
             )
         
-        # Строим маршрут на основе предсказаний
         route = [start_point_idx]
         visited = {start_point_idx}
         
-        # Сортируем оставшиеся точки по комбинированному скору
         remaining_points = [(i, order_scores[i].item(), priority_scores[i].item()) 
                           for i in range(len(points)) if i != start_point_idx]
         
-        # Комбинированный скор: порядок + приоритет
         remaining_points.sort(key=lambda x: x[1] + x[2] * 2.0, reverse=True)
         
         for point_idx, _, _ in remaining_points:
@@ -312,7 +279,7 @@ class ImprovedRouteOptimizer:
         return route
     
     def _optimize_with_genetic(self, points, time_matrix, start_point_idx=0):
-        """Генетический алгоритм (упрощенная версия)"""
+        """Генетический алгоритм"""
         n = len(points)
         
         def create_individual():
@@ -327,23 +294,19 @@ class ImprovedRouteOptimizer:
                 total_time += time_matrix[individual[i]][individual[i + 1]]
             return total_time
         
-        # Простой генетический алгоритм
         population = [create_individual() for _ in range(20)]
         
-        for _ in range(50):  # Меньше поколений для скорости
+        for _ in range(50): 
             fitness_scores = [fitness(ind) for ind in population]
             new_population = []
             
-            # Элитизм - сохраняем лучших
             best_idx = np.argmin(fitness_scores)
             new_population.append(population[best_idx].copy())
             
-            # Остальные создаем через мутацию
             for _ in range(len(population) - 1):
                 parent = random.choice(population)
                 child = parent.copy()
                 
-                # Мутация - перестановка двух случайных элементов
                 if len(child) > 2:
                     i, j = random.sample(range(1, len(child)), 2)
                     child[i], child[j] = child[j], child[i]
@@ -352,7 +315,6 @@ class ImprovedRouteOptimizer:
             
             population = new_population
         
-        # Возвращаем лучшую особь
         fitness_scores = [fitness(ind) for ind in population]
         best_idx = np.argmin(fitness_scores)
         return population[best_idx]
@@ -366,23 +328,21 @@ class ImprovedRouteOptimizer:
         elif method == 'gnn':
             return self._optimize_with_gnn(points, time_matrix, start_point_idx)
         else:
-            # По умолчанию используем гибридный метод
+            
             return self.optimize_route_hybrid(points, time_matrix, start_point_idx)
     
     def calculate_arrival_times(self, route, points, time_matrix, start_time):
         """Расчет времени прибытия в каждую точку"""
         arrival_times = []
-        current_time = start_time.hour * 60 + start_time.minute  # время в минутах
+        current_time = start_time.hour * 60 + start_time.minute  
         
         for i, point_idx in enumerate(route):
             hour = int(current_time // 60)
             minute = int(current_time % 60)
             arrival_times.append(f"{hour:02d}:{minute:02d}")
             
-            # Добавляем время остановки
             current_time += points[point_idx].stop_duration
             
-            # Добавляем время до следующей точки
             if i < len(route) - 1:
                 next_idx = route[i + 1]
                 current_time += time_matrix[point_idx][next_idx]

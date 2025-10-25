@@ -5,11 +5,9 @@
 from pathlib import Path
 import sys
 
-# Добавляем корневую директорию в путь Python
 ROOT_DIR = Path(__file__).parent
 sys.path.insert(0, str(ROOT_DIR))
 
-# Проверяем наличие необходимых директорий
 REQUIRED_DIRS = [
     "app",
     "app/schemas", 
