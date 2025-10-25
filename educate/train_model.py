@@ -10,6 +10,9 @@ import seaborn as sns
 from sklearn.model_selection import train_test_split
 import json
 import os
+import sys
+
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from app.models.data_processor import DataProcessor
 from app.models.gnn_optimizer import RouteOptimizationGNN, RouteOptimizer
@@ -33,6 +36,11 @@ class RouteDataset(Dataset):
             'optimal_route': self.optimal_routes[idx],
             'features': self.features_list[idx]
         }
+
+def custom_collate_fn(batch):
+    """Кастомная функция для обработки батчей разного размера"""
+    # Возвращаем батч как есть, без попытки конвертировать в тензоры
+    return batch
 
 class ModelTrainer:
     """Класс для обучения GNN модели"""
@@ -174,11 +182,11 @@ class ModelTrainer:
             self.optimizer.zero_grad()
             
             batch_loss = 0
-            for i in range(len(batch['points'])):
-                points = batch['points'][i]
-                time_matrix = batch['time_matrix'][i]
-                optimal_route = batch['optimal_route'][i]
-                features = batch['features'][i]
+            for item in batch:
+                points = item['points']
+                time_matrix = item['time_matrix']
+                optimal_route = item['optimal_route']
+                features = item['features']
                 
                 # Создаем граф
                 graph_data = self.create_graph_data(features, time_matrix)
@@ -206,7 +214,7 @@ class ModelTrainer:
                 loss = order_loss + time_loss
                 batch_loss += loss
             
-            batch_loss /= len(batch['points'])
+            batch_loss /= len(batch)
             batch_loss.backward()
             self.optimizer.step()
             
@@ -222,11 +230,11 @@ class ModelTrainer:
         with torch.no_grad():
             for batch in dataloader:
                 batch_loss = 0
-                for i in range(len(batch['points'])):
-                    points = batch['points'][i]
-                    time_matrix = batch['time_matrix'][i]
-                    optimal_route = batch['optimal_route'][i]
-                    features = batch['features'][i]
+                for item in batch:
+                    points = item['points']
+                    time_matrix = item['time_matrix']
+                    optimal_route = item['optimal_route']
+                    features = item['features']
                     
                     graph_data = self.create_graph_data(features, time_matrix)
                     
@@ -248,7 +256,7 @@ class ModelTrainer:
                     loss = order_loss + time_loss
                     batch_loss += loss
                 
-                batch_loss /= len(batch['points'])
+                batch_loss /= len(batch)
                 total_loss += batch_loss.item()
         
         return total_loss / len(dataloader)
@@ -268,8 +276,8 @@ class ModelTrainer:
         train_dataset = RouteDataset(train_points, train_matrices, train_routes, train_features)
         val_dataset = RouteDataset(val_points, val_matrices, val_routes, val_features)
         
-        train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
-        val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
+        train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, collate_fn=custom_collate_fn)
+        val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False, collate_fn=custom_collate_fn)
         
         print(f"Начинаем обучение на {epochs} эпох...")
         print(f"Устройство: {self.device}")
