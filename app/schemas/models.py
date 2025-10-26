@@ -223,3 +223,46 @@ class RouteStatistics(BaseModel):
                 "traffic_level": 3
             }
         }
+
+class RouteComparison(BaseModel):
+    """Pydantic модель для сравнения маршрутов"""
+    gnn_route: RouteResponse = Field(..., description="Маршрут, оптимизированный с помощью GNN")
+    tsp_route: RouteResponse = Field(..., description="Маршрут, оптимизированный с помощью TSP")
+    comparison_metrics: Dict[str, float] = Field(..., description="Метрики сравнения")
+    improvement_percentage: Dict[str, float] = Field(..., description="Процент улучшения GNN над TSP")
+    recommendation: str = Field(..., description="Рекомендация по выбору алгоритма")
+    
+    class Config:
+        """Конфигурация модели"""
+        schema_extra = {
+            "example": {
+                "gnn_route": {
+                    "optimized_order": [0, 2, 1, 3],
+                    "arrival_times": ["09:00", "09:45", "10:30", "11:15"],
+                    "total_distance": 12.5,
+                    "total_time": 120.0,
+                    "route_coordinates": [[47.221532, 39.704423], [47.235671, 39.689543]],
+                    "success": True,
+                    "message": "Маршрут успешно оптимизирован"
+                },
+                "tsp_route": {
+                    "optimized_order": [0, 1, 2, 3],
+                    "arrival_times": ["09:00", "09:30", "10:15", "11:00"],
+                    "total_distance": 15.2,
+                    "total_time": 135.0,
+                    "route_coordinates": [[47.221532, 39.704423], [47.235671, 39.689543]],
+                    "success": True,
+                    "message": "Маршрут успешно оптимизирован"
+                },
+                "comparison_metrics": {
+                    "distance_improvement": 2.7,
+                    "time_improvement": 15.0,
+                    "efficiency_score": 0.85
+                },
+                "improvement_percentage": {
+                    "distance": 17.8,
+                    "time": 11.1
+                },
+                "recommendation": "GNN показывает лучшие результаты по времени и расстоянию"
+            }
+        }

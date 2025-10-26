@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
 
 from app.routers.route_optimization import router as route_router
+from app.routers.route_comparison import router as comparison_router
 
 app = FastAPI(
     title="Route Optimization API",
@@ -21,6 +22,7 @@ app.add_middleware(
 )
 
 app.include_router(route_router)
+app.include_router(comparison_router)
 
 @app.get("/")
 async def root():
@@ -34,7 +36,9 @@ async def root():
             "api_redoc": "/redoc",
             "health": "/api/v1/health",
             "optimize_route": "/api/v1/optimize-route",
-            "dataset_info": "/api/v1/dataset-info"
+            "dataset_info": "/api/v1/dataset-info",
+            "get_route_schemas": "/api/v1/get",
+            "compare_demo_routes": "/api/v1/compare-demo"
         },
         "architecture": {
             "schemas": "app/schemas/",
